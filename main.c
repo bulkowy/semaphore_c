@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include "queue.h"
 #include "semaphore.h"
+#include "processes.h"
 
 int main(){
     int semid;
