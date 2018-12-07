@@ -25,5 +25,10 @@ int get(struct fifo_queue *q);
 void put(struct fifo_queue *q, int value);
 
 int count_occurences(struct fifo_queue *q, int mod);
+int count_size(struct fifo_queue *q);
+int can_produce_even(struct fifo_queue *q);
+int can_produce_odd(struct fifo_queue *q);
+int can_eat_even(struct fifo_queue *q);
+int can_eat_odd(struct fifo_queue *q);
 
 #endif

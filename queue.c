@@ -86,3 +86,29 @@ int count_occurences(struct fifo_queue *q, int mod){
 
     return count;
 }
+
+int count_size(struct fifo_queue *q){
+    struct queue_elem *tmp_elem = q->head;
+    int count = 0;
+    while(tmp_elem != NULLPTR){
+        count++;
+        tmp_elem = tmp_elem->next_elem;
+    }
+    return count;
+}
+
+int can_produce_even(struct fifo_queue *q){
+    return (count_occurences(q, 0) < 10);
+}
+
+int can_produce_odd(struct fifo_queue *q){
+    return (count_occurences(q, 1) < count_occurences(q, 0));
+}
+
+int can_eat_even(struct fifo_queue *q){
+	return (count_size(q) > 3 && peak_head(q)%2 == 0);
+}
+
+int can_eat_odd(struct fifo_queue *q){
+	return (count_size(q) > 7 && peak_head(q)%2 == 1);
+}
