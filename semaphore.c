@@ -13,10 +13,7 @@ int semaphore_P(int semid, int semnum){
 }
 
 int semaphore_V(int semid, int semnum){
-		buf.sem_num = semnum; 
-		buf.sem_op = 1; 
-		semop(semid, &buf, 1);
+	buf.sem_num = semnum; 
+	buf.sem_op = 1; 
+	semop(semid, &buf, 1);
 }
-
-void subprocess_do(int semnum);
-int can_subprocess_do(int semnum);

@@ -8,6 +8,7 @@
 #include "queue.h"
 #include "semaphore.h"
 #include "processes.h"
+#include <sys/wait.h>
 
 
 int main(){
@@ -37,16 +38,14 @@ int main(){
     }
 
     struct fifo_queue *my_queue = init_queue();
-    put(my_queue, 5);
-    put(my_queue, 2);
-    put(my_queue, 1);
-    put(my_queue, 2);
-    put(my_queue, 4);
 
-    printf("%d \n", count_occurences(my_queue, 1));
-    printf("%d \n", count_occurences(my_queue, 0));
+    create_sp(A1, my_queue);
+    create_sp(A2, my_queue);
+    create_sp(B1, my_queue);
+    create_sp(B2, my_queue);
 
     free_queue(my_queue);
    
+    while(wait(NULL) > 0) {}
     return 0;
 }

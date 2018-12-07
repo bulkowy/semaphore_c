@@ -45,27 +45,125 @@ int *bind_data(int *semid, int *shmid){
     return proc_waiting;
 }
 
+int get_svalue(int semid, int sp_idx){
+    return semctl(semid, sp_idx, GETVAL, (int)0);
+}
+
+int test_wakeup(struct fifo_queue *queue, int semid, int *proc_waiting, int sp_idx){
+    if(!(sp_idx == SP_A1) && can_produce_even(queue) && (proc_waiting[SP_A1] > 0)){
+        semaphore_V(semid, SP_A1);
+        printf("(IDX:%d) - I woke up SP_A1\n", sp_idx);
+    }
+    else if(!(sp_idx == SP_A2) && can_produce_odd(queue) && (proc_waiting[SP_A2] > 0)){
+        semaphore_V(semid, SP_A2);
+        printf("(IDX:%d) - I woke up SP_A2\n", sp_idx);
+    }
+    else if(!(sp_idx == SP_B1) && can_eat_even(queue) && (proc_waiting[SP_B1] > 0)){
+        semaphore_V(semid, SP_B1);
+        printf("(IDX:%d) - I woke up SP_B1\n", sp_idx);
+    }
+    else if(!(sp_idx == SP_B2) && can_eat_odd(queue) && (proc_waiting[SP_B2] > 0)){
+        semaphore_V(semid, SP_B2);
+        printf("(IDX:%d) - I woke up SP_B2\n", sp_idx);
+    }
+    else semaphore_V(semid, MUTEX);
+}
+
 void A1(struct fifo_queue *queue){
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);
     if (proc_waiting == NULL) return;
+    int counter = 0;
 
+    while(SP_A1){
+        semaphore_P(semid, MUTEX);
+        if( !can_produce_even(queue) ){
+            ++proc_waiting[SP_A1];
+            semaphore_V(semid, MUTEX);
+            printf("(A1) - Went Sleep\n");
+            semaphore_P(semid, SP_A1);
 
+            semaphore_P(semid, MUTEX);
+            --proc_waiting[SP_A1];
+        }
+        put(queue, counter);
+        printf("(A1) - Produced: %d\n", counter);
+        counter = ( counter + 2 ) % 100;
+
+        test_wakeup(queue, semid, proc_waiting, SP_A1);
+    }
 }
+
 void A2(struct fifo_queue *queue){
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);
     if (proc_waiting == NULL) return;
+    int counter = 1;
+
+    while(SP_A2){
+        semaphore_P(semid, MUTEX);
+        if( !can_produce_odd(queue) ){
+            ++proc_waiting[SP_A2];
+            semaphore_V(semid, MUTEX);
+
+            printf("(A2) - Went Sleep\n");
+            semaphore_P(semid, SP_A2);
+
+            semaphore_P(semid, MUTEX);
+            --proc_waiting[SP_A2];
+        }
+        put(queue, counter);
+        printf("(A2) - Produced: %d\n", counter);
+        counter = ( counter + 2 ) % 100;
+
+        test_wakeup(queue, semid, proc_waiting, SP_A2);
+    }
 }
 
 void B1(struct fifo_queue *queue){
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);
+    int val;
     if (proc_waiting == NULL) return;
+
+    while(SP_B1){
+        semaphore_P(semid, MUTEX);
+        if( !can_eat_even(queue) ){
+            ++proc_waiting[SP_B1];
+            semaphore_V(semid, MUTEX);
+            printf("(B1) - Went Sleep\n");
+            semaphore_P(semid, SP_B1);
+
+            semaphore_P(semid, MUTEX);
+            --proc_waiting[SP_B1];
+        }
+        val = get(queue);
+        printf("(B1) - Eaten: %d\n", val);
+
+        test_wakeup(queue, semid, proc_waiting, SP_B1);
+    }
 }
 
 void B2(struct fifo_queue *queue){
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);
+    int val;
     if (proc_waiting == NULL) return;
+
+    while(SP_B2){
+        semaphore_P(semid, MUTEX);
+        if( !can_eat_odd(queue) ){
+            ++proc_waiting[SP_B2];
+            semaphore_V(semid, MUTEX);
+            printf("(B2) - Went Sleep\n");
+            semaphore_P(semid, SP_B2);
+
+            semaphore_P(semid, MUTEX);
+            --proc_waiting[SP_B2];
+        }
+        val = get(queue);
+        printf("(B2) - Eaten: %d\n", val);
+
+        test_wakeup(queue, semid, proc_waiting, SP_B2);
+    }
 }
