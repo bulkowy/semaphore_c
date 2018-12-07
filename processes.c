@@ -12,18 +12,35 @@
 
 
 void create_sp(void (*sp_func)()){
-	int ForkResult = fork();
+    /*
+     * Create subprocess using `fork` from `unistd.h`
+     * and make it execute passed `sp_func` function
+     * 
+     * @params
+     * `sp_func` --> SubProcess_Function
+     */
+	
+    int ForkResult = fork();
 
-	if(ForkResult == 0)
-	{
+    // If subprocess forked successfully execute `sp_func`
+	if(ForkResult == 0){
 		sp_func();
 		exit(0);
 	}
 }
 
 int *bind_data(int *semid, int *shmid){
-
-    int *proc_waiting;
+    /*
+     * Assign to `semid` and `shmid` shared memory addresses
+     * for created semaphores and buffers respectively
+     * 
+     * @params
+     * `semid` - Address for Semaphores
+     * `shmid` - Address for Buffer counting sleeping SubProcesses
+     * 
+     * @returns
+     * `proc_waiting` - Pointer to first elem of `shmid` Buffer
+     */
 
     *semid = semget(KEY, N, 0600);
     if (*semid == -1){
@@ -37,7 +54,7 @@ int *bind_data(int *semid, int *shmid){
         return NULL;
     }
 
-    proc_waiting = (int*)shmat(*shmid, NULL, 0);
+    int *proc_waiting = (int*)shmat(*shmid, NULL, 0);
     if (proc_waiting == NULL){
         perror("shmat error");
         return NULL;
@@ -47,46 +64,78 @@ int *bind_data(int *semid, int *shmid){
 }
 
 int *bind_queue(){
+    /*
+     * After finding shared memory segment for circular buffer
+     * return pointer to its first element
+     * 
+     * @returns
+     * `buf` - pointer to first element of circular buffer
+     */
+    
     int shmid = shmget(KEY+1, (MAXSIZE+2)*sizeof(int), 0600);
     if (shmid == -1){
-		perror("Utworzenie segmentu pamieci wspoldzielonej");
+		perror("shmget error");
 		exit(1);
     }
 
 	int *buf = (int*)shmat(shmid, NULL, 0);
     if (buf == NULL){
-		perror("Przylaczenie segmentu pamieci wspoldzielonej");
+		perror("shmat error");
 		exit(1);
     }
 
     return buf;
 }
 
-int get_svalue(int semid, int sp_idx){
-    return semctl(semid, sp_idx, GETVAL, (int)0);
-}
-
 int test_wakeup(int *queue, int semid, int *proc_waiting, int sp_idx){
-    if(!(sp_idx == SP_A1) && can_produce_even(queue) && (proc_waiting[SP_A1] > 0)){
+    /*
+     * Function testing which checks whether subprocess might wakeup
+     * OTHER subprocess that went asleep because of not meeting
+     * its requirements for job
+     * 
+     * For every `if`:
+     * CHECK WHETHER:
+     * - subprocess, which calls `test_wakeup`, is not trying to wakeup
+     *   its subprocess group: `!(sp_idx == SP_{A1,A2,B1,B2})`
+     * - currently investigated subprocess group is meeting requirements
+     * - if there is any subprocess from group waiting for signal
+     * 
+     * IF TRUE:
+     * - up semaphore related to chosen subprocess group
+     * 
+     * IF FALSE:
+     * - check next subprocess group
+     * 
+     * IF NO SUBPROCESS GROUP MET REQUIREMENTS:
+     * - leave critical section
+     */
+
+    if(!(sp_idx == SP_A1) && can_produce_even(queue) 
+    && (proc_waiting[SP_A1] > 0))
         semaphore_V(semid, SP_A1);
-        //printf("(IDX:%d) - I woke up SP_A1\n", sp_idx);
-    }
-    else if(!(sp_idx == SP_A2) && can_produce_odd(queue) && (proc_waiting[SP_A2] > 0)){
+
+    else if(!(sp_idx == SP_A2) && can_produce_odd(queue) 
+    && (proc_waiting[SP_A2] > 0))
         semaphore_V(semid, SP_A2);
-        //printf("(IDX:%d) - I woke up SP_A2\n", sp_idx);
-    }
-    else if(!(sp_idx == SP_B1) && can_eat_even(queue) && (proc_waiting[SP_B1] > 0)){
+
+    else if(!(sp_idx == SP_B1) && can_eat_even(queue) 
+    && (proc_waiting[SP_B1] > 0))
         semaphore_V(semid, SP_B1);
-        //printf("(IDX:%d) - I woke up SP_B1\n", sp_idx);
-    }
-    else if(!(sp_idx == SP_B2) && can_eat_odd(queue) && (proc_waiting[SP_B2] > 0)){
+    
+    else if(!(sp_idx == SP_B2) && can_eat_odd(queue) 
+    && (proc_waiting[SP_B2] > 0))
         semaphore_V(semid, SP_B2);
-        //printf("(IDX:%d) - I woke up SP_B2\n", sp_idx);
-    }
+    
     else semaphore_V(semid, MUTEX);
 }
 
 void A1(){
+    /*
+     * Subprocess algorithm for group A1
+     * 
+     * Every 0.5s, if possible, creates next EVEN element
+     * and put it in shared circural buffer
+     */
     int *queue = bind_queue();
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);
@@ -94,18 +143,18 @@ void A1(){
     int counter = 0;
 
     while(SP_A1){
-        semaphore_P(semid, MUTEX);
-        if( !can_produce_even(queue) ){
+        semaphore_P(semid, MUTEX);          // enter critical section
+        if( !can_produce_even(queue) ){     // check if requirements are met
             ++proc_waiting[SP_A1];
-            semaphore_V(semid, MUTEX);
-            printf("(A1) - Went Sleep\n");
-            semaphore_P(semid, SP_A1);
+            semaphore_V(semid, MUTEX);      // leave critical section
+            printf("(A1) - Went Sleep\n");  
+            semaphore_P(semid, SP_A1);      // block A1 subprocesses
 
             --proc_waiting[SP_A1];
         }
-        put(queue, counter);
+        put(queue, counter);                // create EVEN element
         printf("(A1) - Produced: %d\n", counter);
-        counter = ( counter + 2 ) % 100;
+        counter = ( counter + 2 ) % 100;    // update value for next element
 
         test_wakeup(queue, semid, proc_waiting, SP_A1);
         usleep(500000);
@@ -113,6 +162,12 @@ void A1(){
 }
 
 void A2(){
+    /*
+     * Subprocess algorithm for group A1
+     * 
+     * Every 0.5s, if possible, creates next EVEN element
+     * and put it in shared circural buffer
+     */
     int *queue = bind_queue();
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);
@@ -141,6 +196,12 @@ void A2(){
 }
 
 void B1(){
+    /*
+     * Subprocess algorithm for group A1
+     * 
+     * Every 0.5s, if possible, creates next EVEN element
+     * and put it in shared circural buffer
+     */
     int *queue = bind_queue();
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);
@@ -166,6 +227,12 @@ void B1(){
 }
 
 void B2(){
+    /*
+     * Subprocess algorithm for group A1
+     * 
+     * Every 0.5s, if possible, creates next EVEN element
+     * and put it in shared circural buffer
+     */
     int *queue = bind_queue();
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);

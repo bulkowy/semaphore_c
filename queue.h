@@ -2,13 +2,13 @@
 #define _QUEUE_H
 
 #include <stdio.h>
-#define NULLPTR 0
-#define FREE -5
-#define INT_MIN 0x80000000
+
+#define FREE -5             // value used for flagging buffer values as free
+#define INT_MIN 0x80000000 
 #define INT_MAX 0x7FFFFFFF
-#define MAXSIZE 30
-#define HEAD 30
-#define TAIL 31
+#define MAXSIZE 30          // max size of circular buffer
+#define HEAD 30             // location in buffer for pointer to its head
+#define TAIL 31             // location in buffer for pointer to its tail
 
 int indepRand();
 

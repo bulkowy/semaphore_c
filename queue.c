@@ -8,8 +8,11 @@
 #include <sys/shm.h>
 #include <sys/wait.h>
 
-int indepRand()
-{
+int indepRand(){
+    /*
+     * Function retrieving random value from
+     * `/dev/urandom` location
+     */
 	FILE * F = fopen("/dev/urandom", "r");
 	if(!F)
 	{
@@ -24,6 +27,13 @@ int indepRand()
 }
 
 int* init_queue(){
+    /*
+     * Initialization of Circular Buffer (Queue)
+     * 
+     * Assigns shared memory and fills AVAILABLE cells with `FREE` value
+     * And sets 2 last elems with zeros as pointer to HEAD/TAIL
+     */
+
     int shmid = shmget(KEY+1, (MAXSIZE+2)*sizeof(int), IPC_CREAT|0600);
     if (shmid == -1){
 		perror("Utworzenie segmentu pamieci wspoldzielonej");
@@ -48,11 +58,22 @@ void free_queue(int* q){
 }
 
 int peak_head(int *q){
+    /*
+     * @returns
+     * - `q[ q[HEAD] ] - value at head of Circular buffer
+     */
+
     if(q[HEAD] == q[TAIL]) return INT_MIN;
     return q[ q[HEAD] ];
 }
 
 int get(int *q){
+    /*
+     * Marks first element in queue as FREE,
+     * Shifts HEAD pointer one place further
+     * And returns value from freed cell
+     */
+
     int tmp = q[ q[HEAD] ];
 
     if(q[HEAD] == q[TAIL]) return INT_MIN;
@@ -63,13 +84,23 @@ int get(int *q){
 }
 
 void put(int *q, int value){
-
+    /*
+     * Puts given `value` at TAIL of circular buffer
+     * And shifts TAIL pointer one place further
+     */
     q[ q[TAIL] ] = value;
     q[TAIL] = (q[TAIL] + 1) % MAXSIZE;
     return;
 }
 
 int count_occurences(int *q, int mod){
+    /*
+     * Returns amount of EVEN/ODD elems in circular buffer
+     * 
+     * @params
+     * `mod` - if == 0 - counts EVEN
+     *         if == 1 - counts ODD
+     */
     int count = 0;
     for(int i = q[HEAD]; i != q[TAIL]; i = (i+1)%30){
         if( q[i] % 2 == mod )
@@ -80,6 +111,9 @@ int count_occurences(int *q, int mod){
 }
 
 int count_size(int *q){
+    /*
+     * Return amount of elems in circular buffer
+     */
     int count = 0;
     for(int i = q[HEAD]; i != q[TAIL]; i = (i+1)%30){
         count++;
