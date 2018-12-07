@@ -6,7 +6,6 @@
 
 // semaphore mutex = 1;
 // semaphore sp_mutex[4] = {1, 1, 1, 1};
-unsigned int sp_waiting[4] = {0, 0, 0, 0};
 
 int semaphore_P(int semid, int semnum);
 int semaphore_V(int semid, int semnum);

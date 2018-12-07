@@ -5,7 +5,6 @@
 #include "semaphore.h"
 
 static struct sembuf buf;
-unsigned int sp_waiting[4] = {0, 0, 0, 0};
 
 int semaphore_P(int semid, int semnum){ 
     buf.sem_num = semnum;
