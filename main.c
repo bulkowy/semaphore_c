@@ -24,6 +24,7 @@ int main(){
 		perror("Przylaczenie segmentu pamieci wspoldzielonej");
 		exit(1);
     }
+
     for(int i = 0; i < 4; i++) counter[i] = 0;
     semid = semget(KEY, N, IPC_CREAT|0600);
     if (semid == -1){
@@ -37,22 +38,30 @@ int main(){
 	    }
     }
 
-    struct fifo_queue *my_queue = init_queue();
+	
 
-    create_sp(&A1, my_queue);
-    create_sp(&A2, my_queue);
-    create_sp(&B1, my_queue);
-    create_sp(&B2, my_queue);
+    int *buf = init_queue();
 
-    /* put(my_queue, 3);
-    put(my_queue, 5);
-    put(my_queue, 6);
-    put(my_queue, 7);
-    put(my_queue, 2); */
-
-
-    free_queue(my_queue);
+    create_sp(&A1);
+    create_sp(&A2);
+    create_sp(&B1);
+    create_sp(&B2);
 
     while(wait(NULL) > 0) {}
+
+
+    /* int *buf = init_queue();
+    printf("size = %d\n", count_size(buf));
+    
+    for(int i = 0; i < 20; i++){
+        put(buf, i);
+    }
+    printf("size = %d\n", count_size(buf));
+    printf("head = %d\n", peak_head(buf));
+    for(int i = 0; i < 10; i++){
+        printf("get (%d): %d\n", i, get(buf));
+    }
+    printf("head = %d\n", peak_head(buf)); */
+
     return 0;
 }

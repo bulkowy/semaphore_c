@@ -11,11 +11,12 @@
 #include "semaphore.h"
 
 
-void create_sp(void (*sp_func)(struct fifo_queue* que), struct fifo_queue *q){
+void create_sp(void (*sp_func)()){
 	int ForkResult = fork();
+
 	if(ForkResult == 0)
 	{
-		sp_func(q);
+		sp_func();
 		exit(0);
 	}
 }
@@ -45,11 +46,27 @@ int *bind_data(int *semid, int *shmid){
     return proc_waiting;
 }
 
+int *bind_queue(){
+    int shmid = shmget(KEY+1, (MAXSIZE+2)*sizeof(int), 0600);
+    if (shmid == -1){
+		perror("Utworzenie segmentu pamieci wspoldzielonej");
+		exit(1);
+    }
+
+	int *buf = (int*)shmat(shmid, NULL, 0);
+    if (buf == NULL){
+		perror("Przylaczenie segmentu pamieci wspoldzielonej");
+		exit(1);
+    }
+
+    return buf;
+}
+
 int get_svalue(int semid, int sp_idx){
     return semctl(semid, sp_idx, GETVAL, (int)0);
 }
 
-int test_wakeup(struct fifo_queue *queue, int semid, int *proc_waiting, int sp_idx){
+int test_wakeup(int *queue, int semid, int *proc_waiting, int sp_idx){
     if(!(sp_idx == SP_A1) && can_produce_even(queue) && (proc_waiting[SP_A1] > 0)){
         semaphore_V(semid, SP_A1);
         //printf("(IDX:%d) - I woke up SP_A1\n", sp_idx);
@@ -69,7 +86,8 @@ int test_wakeup(struct fifo_queue *queue, int semid, int *proc_waiting, int sp_i
     else semaphore_V(semid, MUTEX);
 }
 
-void A1(struct fifo_queue *queue){
+void A1(){
+    int *queue = bind_queue();
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);
     if (proc_waiting == NULL) return;
@@ -87,8 +105,6 @@ void A1(struct fifo_queue *queue){
         }
         put(queue, counter);
         printf("(A1) - Produced: %d\n", counter);
-
-        printf("(A1) - HEAD: %d\n", peak_head(queue));
         counter = ( counter + 2 ) % 100;
 
         test_wakeup(queue, semid, proc_waiting, SP_A1);
@@ -96,7 +112,8 @@ void A1(struct fifo_queue *queue){
     }
 }
 
-void A2(struct fifo_queue *queue){
+void A2(){
+    int *queue = bind_queue();
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);
     if (proc_waiting == NULL) return;
@@ -123,7 +140,8 @@ void A2(struct fifo_queue *queue){
     }
 }
 
-void B1(struct fifo_queue *queue){
+void B1(){
+    int *queue = bind_queue();
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);
     int val;
@@ -147,7 +165,8 @@ void B1(struct fifo_queue *queue){
     }
 }
 
-void B2(struct fifo_queue *queue){
+void B2(){
+    int *queue = bind_queue();
     int semid, shmid;
     int *proc_waiting = bind_data(&semid, &shmid);
     int val;
