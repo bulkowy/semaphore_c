@@ -8,24 +8,6 @@
 #include <sys/shm.h>
 #include <sys/wait.h>
 
-int indepRand(){
-    /*
-     * Function retrieving random value from
-     * `/dev/urandom` location
-     */
-	FILE * F = fopen("/dev/urandom", "r");
-	if(!F)
-	{
-		printf("Cannot open urandom...\n");
-		abort();
-	}
-	unsigned int Ret;
-	unsigned int X = fread((char *) &Ret, 1, sizeof(unsigned int), F);
-	fclose(F);
-	
-	return Ret;
-}
-
 int* init_queue(){
     /*
      * Initialization of Circular Buffer (Queue)
@@ -91,6 +73,18 @@ void put(int *q, int value){
     q[ q[TAIL] ] = value;
     q[TAIL] = (q[TAIL] + 1) % MAXSIZE;
     return;
+}
+
+void print_queue(int *q){
+    /*
+     * Prints contents of given circular buffer
+     */
+    printf("Table contents: [ ");
+
+    for(int i = q[HEAD]; i != q[TAIL]; i = (i+1)%30)
+        printf("%d ", q[i]);
+
+    printf("]\n");
 }
 
 int count_occurences(int *q, int mod){

@@ -10,13 +10,12 @@
 #define HEAD 30             // location in buffer for pointer to its head
 #define TAIL 31             // location in buffer for pointer to its tail
 
-int indepRand();
-
 int* init_queue();
 void free_queue(int* q);
 int peak_head(int *q);
 int get(int *q);
 void put(int *q, int value);
+void print_queue(int *q);
 
 int count_occurences(int *q, int mod);
 int count_size(int *q);

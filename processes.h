@@ -7,8 +7,6 @@ void A2();
 void B1();
 void B2();
 
-int get_svalue(int semid);
-
 int test_wakeup(int *queue, int semid, int *proc_waiting, int sp_idx);
 
 #endif

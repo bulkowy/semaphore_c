@@ -110,20 +110,22 @@ int test_wakeup(int *queue, int semid, int *proc_waiting, int sp_idx){
      * - leave critical section
      */
 
+    print_queue(queue);
+
     if(!(sp_idx == SP_A1) && can_produce_even(queue) 
-    && (proc_waiting[SP_A1] > 0))
+    && (proc_waiting[SP_A1-1] > 0))
         semaphore_V(semid, SP_A1);
 
     else if(!(sp_idx == SP_A2) && can_produce_odd(queue) 
-    && (proc_waiting[SP_A2] > 0))
+    && (proc_waiting[SP_A2-1] > 0))
         semaphore_V(semid, SP_A2);
 
     else if(!(sp_idx == SP_B1) && can_eat_even(queue) 
-    && (proc_waiting[SP_B1] > 0))
+    && (proc_waiting[SP_B1-1] > 0))
         semaphore_V(semid, SP_B1);
     
     else if(!(sp_idx == SP_B2) && can_eat_odd(queue) 
-    && (proc_waiting[SP_B2] > 0))
+    && (proc_waiting[SP_B2-1] > 0))
         semaphore_V(semid, SP_B2);
     
     else semaphore_V(semid, MUTEX);
@@ -145,12 +147,13 @@ void A1(){
     while(SP_A1){
         semaphore_P(semid, MUTEX);          // enter critical section
         if( !can_produce_even(queue) ){     // check if requirements are met
-            ++proc_waiting[SP_A1];
+            ++proc_waiting[SP_A1-1];
             semaphore_V(semid, MUTEX);      // leave critical section
             printf("(A1) - Went Sleep\n");  
             semaphore_P(semid, SP_A1);      // block A1 subprocesses
 
-            --proc_waiting[SP_A1];
+            --proc_waiting[SP_A1-1];
+            printf("(A1) - Woke Up\n");
         }
         put(queue, counter);                // create EVEN element
         printf("(A1) - Produced: %d\n", counter);
@@ -177,13 +180,14 @@ void A2(){
     while(SP_A2){
         semaphore_P(semid, MUTEX);
         if( !can_produce_odd(queue) ){
-            ++proc_waiting[SP_A2];
+            ++proc_waiting[SP_A2-1];
             semaphore_V(semid, MUTEX);
 
             printf("(A2) - Went Sleep\n");
             semaphore_P(semid, SP_A2);
 
-            --proc_waiting[SP_A2];
+            --proc_waiting[SP_A2-1];
+            printf("(A2) - Woke Up\n");
         }
         put(queue, counter);
         printf("(A2) - Produced: %d\n", counter);
@@ -211,12 +215,13 @@ void B1(){
     while(SP_B1){
         semaphore_P(semid, MUTEX);
         if( !can_eat_even(queue) ){
-            ++proc_waiting[SP_B1];
+            ++proc_waiting[SP_B1-1];
             semaphore_V(semid, MUTEX);
             printf("(B1) - Went Sleep\n");
             semaphore_P(semid, SP_B1);
 
-            --proc_waiting[SP_B1];
+            --proc_waiting[SP_B1-1];
+            printf("(B1) - Woke Up\n");
         }
         val = get(queue);
         printf("(B1) - Eaten: %d\n", val);
@@ -242,12 +247,13 @@ void B2(){
     while(SP_B2){
         semaphore_P(semid, MUTEX);
         if( !can_eat_odd(queue) ){
-            ++proc_waiting[SP_B2];
+            ++proc_waiting[SP_B2-1];
             semaphore_V(semid, MUTEX);
             printf("(B2) - Went Sleep\n");
             semaphore_P(semid, SP_B2);
 
-            --proc_waiting[SP_B2];
+            --proc_waiting[SP_B2-1];
+            printf("(B2) - Woke Up\n");
         }
         val = get(queue);
         printf("(B2) - Eaten: %d\n", val);
